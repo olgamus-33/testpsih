@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный Психологический Тест</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .question-card {
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+            transform: translateY(20px);
+            display: none;
+        }
+        .question-card.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .radio-label:has(input:checked) {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-10">
+        
+        <!-- Test Container -->
+        <div id="test-container">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Психологический Тест</h1>
+                <p class="text-gray-600 mt-2">Отвечайте быстро, доверьтесь своей интуиции.</p>
+            </div>
+            
+            <form id="quiz-form">
+                <!-- Questions will be dynamically inserted here -->
+            </form>
+
+            <div class="mt-8 flex justify-between items-center">
+                 <button id="prev-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>Назад</button>
+                 <div id="progress-indicator" class="text-sm text-gray-500"></div>
+                 <button id="next-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 ease-in-out">Далее</button>
+            </div>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container" class="hidden">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Ваши Результаты</h1>
+                <p class="text-gray-600 mt-2">Анализ ваших подсознательных ответов.</p>
+            </div>
+            <div id="results-content" class="space-y-6">
+                <!-- Results will be dynamically inserted here -->
+            </div>
+            <div class="text-center mt-10">
+                <button id="restart-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 ease-in-out">Пройти еще раз</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('quiz-form');
+            const testContainer = document.getElementById('test-container');
+            const resultsContainer = document.getElementById('results-container');
+            const resultsContent = document.getElementById('results-content');
+            const restartBtn = document.getElementById('restart-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const progressIndicator = document.getElementById('progress-indicator');
+
+            let currentQuestionIndex = 0;
+            const userAnswers = [];
+
+            const questions = [
+                {
+                    id: 'q1',
+                    text: 'Вы идете с кем-то по лесу. Кто это?',
+                    type: 'radio',
+                    options: ['Один', 'Друг', 'Брат/Сестра', 'Вторая половинка']
+                },
+                {
+                    id: 'q2',
+                    text: 'Вы гуляете в лесу и видите животное. Опишите, что это за зверь и какого он размера.',
+                    type: 'textarea',
+                    placeholder: 'Например: Большой бурый медведь'
+                },
+                {
+                    id: 'q3',
+                    text: 'Что происходит после того, как вы встретились с ним глазами?',
+                    type: 'textarea',
+                    placeholder: 'Опишите вашу реакцию и действия'
+                },
+                {
+                    id: 'q4',
+                    text: 'Вы идете глубже в лес, видите поляну и на ней стоит дом вашей мечты. Опишите его размер.',
+                    type: 'textarea',
+                    placeholder: 'Например: Маленький уютный домик или огромный особняк'
+                },
+                {
+                    id: 'q5',
+                    text: 'Вокруг дома есть забор?',
+                    type: 'radio',
+                    options: ['Да', 'Нет']
+                },
+                {
+                    id: 'q6',
+                    text: 'Вы входите в дом, идете в столовую и видите обеденный стол. Что находится на нём и вокруг него?',
+                    type: 'textarea',
+                    placeholder: 'Опишите детали...'
+                },
+                {
+                    id: 'q7',
+                    text: 'Вы выходите через заднюю дверь и видите на траве емкость (стакан, чашку). Из какого материала она сделана?',
+                    type: 'radio',
+                    options: ['Стекло', 'Фарфор/Металл', 'Пластик/Бумага', 'Керамика/Глина']
+                },
+                {
+                    id: 'q8',
+                    text: 'Что вы сделаете с этой емкостью?',
+                    type: 'textarea',
+                    placeholder: 'Например: Подниму, Оставлю, Выброшу...'
+                },
+                {
+                    id: 'q9',
+                    text: 'В конце поляны вы видите водоем. Опишите, что это за водоем и его размер.',
+                    type: 'textarea',
+                    placeholder: 'Например: Маленький ручей, огромное озеро...'
+                },
+                {
+                    id: 'q10',
+                    text: 'Как вы собираетесь пересечь этот водоем, чтобы двигаться дальше?',
+                    type: 'textarea',
+                    placeholder: 'Например: Переплыву, обойду, построю мост...'
+                }
+            ];
+
+            const interpretations = [
+                "Человек, с которым ты идешь, — это самый важный человек в твоей жизни.",
+                "Размер воображаемого животного — это на самом деле размер твоих внутренних проблем. Чем больше животное, тем тяжелее тебе жить.",
+                "То, как ты реагируешь на неожиданную встречу в лесу, — наиболее характерный для тебя способ решения проблем (агрессивный, пассивный или ищущий компромисс).",
+                "Размер дома твоей мечты — это размер твоих амбиций. Если он слишком большой, возможно, у тебя завышенные ожидания от жизни.",
+                "Отсутствие забора говорит о том, что ты открытый и внутренне свободный человек. Если он есть, значит, ты ценишь личное пространство и того же ждешь от других.",
+                "Если на столе или возле него нет еды, цветов или людей, значит, ты, скорее всего, глубоко несчастен.",
+                "Прочность и долговечность материала, из которого сделана емкость, — это то, насколько прочными и крепкими ты воспринимаешь свои отношения в семье. Если емкость была металлической или фарфоровой, тебе не о чем беспокоиться. Пластик или бумага могут говорить о тревоге.",
+                "Твой поступок с емкостью характеризует отношение к человеку из вопроса №1.",
+                "Размер водоема — это размер твоего сексуального аппетита.",
+                "Чем более «мокрый» способ передвижения ты выберешь (например, плыть, а не идти по мосту), тем большее значение в твоей жизни имеет интимная жизнь."
+            ];
+
+            function renderQuestion(index) {
+                const q = questions[index];
+                let optionsHTML = '';
+                if (q.type === 'radio') {
+                    q.options.forEach(option => {
+                        optionsHTML += `
+                            <label class="radio-label block w-full text-center cursor-pointer p-3 border-2 border-gray-200 rounded-lg transition duration-200 hover:bg-indigo-50 hover:border-indigo-400">
+                                <input type="radio" name="${q.id}" value="${option}" class="sr-only" required>
+                                <span class="font-medium">${option}</span>
+                            </label>
+                        `;
+                    });
+                     optionsHTML += `
+                        <div class="mt-2">
+                            <input type="text" name="${q.id}_other" class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Другое (укажите свой вариант)">
+                        </div>
+                     `;
+                } else if (q.type === 'textarea') {
+                    optionsHTML = `<textarea name="${q.id}" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" rows="4" placeholder="${q.placeholder}" required></textarea>`;
+                }
+
+                const questionHTML = `
+                    <div id="q-card-${index}" class="question-card" data-question-id="${q.id}">
+                        <h2 class="text-xl md:text-2xl font-semibold mb-6 text-center">${index + 1}. ${q.text}</h2>
+                        <div class="space-y-3">${optionsHTML}</div>
+                    </div>
+                `;
+                form.innerHTML += questionHTML;
+            }
+
+            function showQuestion(index) {
+                document.querySelectorAll('.question-card').forEach((card, i) => {
+                    card.classList.toggle('active', i === index);
+                });
+                progressIndicator.textContent = `Шаг ${index + 1} из ${questions.length}`;
+                prevBtn.disabled = index === 0;
+                if (index === questions.length - 1) {
+                    nextBtn.textContent = 'Показать результаты';
+                } else {
+                    nextBtn.textContent = 'Далее';
+                }
+            }
+            
+            function getAnswerForQuestion(index) {
+                const q = questions[index];
+                const card = document.getElementById(`q-card-${index}`);
+                let answer;
+
+                if (q.type === 'radio') {
+                    const otherInput = card.querySelector(`input[name="${q.id}_other"]`);
+                    if (otherInput && otherInput.value.trim() !== '') {
+                        answer = otherInput.value.trim();
+                    } else {
+                        const checkedRadio = card.querySelector(`input[name="${q.id}"]:checked`);
+                        answer = checkedRadio ? checkedRadio.value : null;
+                    }
+                } else if (q.type === 'textarea') {
+                    const textarea = card.querySelector(`textarea[name="${q.id}"]`);
+                    answer = textarea ? textarea.value.trim() : null;
+                }
+                return answer;
+            }
+
+            function validateCurrentQuestion() {
+                const answer = getAnswerForQuestion(currentQuestionIndex);
+                if (!answer || answer === '') {
+                     // Simple feedback, could be a modal or a more visible message
+                    const card = document.getElementById(`q-card-${currentQuestionIndex}`);
+                    card.classList.add('animate-shake');
+                    setTimeout(() => card.classList.remove('animate-shake'), 500);
+                    return false;
+                }
+                return true;
+            }
+
+            nextBtn.addEventListener('click', () => {
+                if (!validateCurrentQuestion()) return;
+
+                userAnswers[currentQuestionIndex] = getAnswerForQuestion(currentQuestionIndex);
+
+                if (currentQuestionIndex < questions.length - 1) {
+                    currentQuestionIndex++;
+                    showQuestion(currentQuestionIndex);
+                } else {
+                    // Show results
+                    showResults();
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentQuestionIndex > 0) {
+                    currentQuestionIndex--;
+                    showQuestion(currentQuestionIndex);
+                }
+            });
+
+            function showResults() {
+                resultsContent.innerHTML = '';
+                userAnswers.forEach((answer, index) => {
+                    const resultHTML = `
+                        <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                            <p class="text-sm text-gray-500 mb-2">Вопрос ${index + 1}: ${questions[index].text}</p>
+                            <p class="text-lg font-semibold text-indigo-700 mb-3">Ваш ответ: <span class="font-normal text-gray-800">${answer}</span></p>
+                            <hr class="my-3">
+                            <p class="text-md"><span class="font-semibold">Интерпретация:</span> ${interpretations[index]}</p>
+                        </div>
+                    `;
+                    resultsContent.innerHTML += resultHTML;
+                });
+                testContainer.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+            }
+
+            restartBtn.addEventListener('click', () => {
+                currentQuestionIndex = 0;
+                userAnswers.length = 0;
+                form.innerHTML = '';
+                questions.forEach((_, index) => renderQuestion(index));
+                showQuestion(0);
+                resultsContainer.classList.add('hidden');
+                testContainer.classList.remove('hidden');
+            });
+
+            // Initial render
+            questions.forEach((_, index) => renderQuestion(index));
+            showQuestion(0);
+
+            // Add a simple shake animation for validation feedback
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes shake {
+                    10%, 90% { transform: translateX(-1px); }
+                    20%, 80% { transform: translateX(2px); }
+                    30%, 50%, 70% { transform: translateX(-4px); }
+                    40%, 60% { transform: translateX(4px); }
+                }
+                .animate-shake {
+                    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+
+</body>
+</html>
